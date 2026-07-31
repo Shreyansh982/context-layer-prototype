@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Context Layer | Enterprise Assistant</title>
+    <link rel="stylesheet" href="/dashboard/static/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">✦</span><span>Context Layer</span></div>
+        <div class="sidebar-copy">
+          <p class="eyebrow">ENTERPRISE INTELLIGENCE</p>
+          <h1>Work with your data, naturally.</h1>
+          <p>Ask about people, policies, systems, and the conversation in one focused workspace.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-title"><span id="health-dot" class="health-dot"></span><span id="health-label">Checking services</span></div>
+          <div id="service-list" class="service-list">Connecting to the context layer…</div>
+        </div>
+        <p class="sidebar-footer">Context Layer Prototype<br>Enterprise workspace</p>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">ASSISTANT</p>
+            <h2>Enterprise workspace</h2>
+          </div>
+          <div class="user-control">
+            <label for="demo-key">Demo API key</label>
+            <input id="demo-key" type="password" autocomplete="current-password" aria-describedby="id-help">
+            <button id="connect" type="button">Connect</button>
+            <small id="id-help">Configured locally in <code>.env</code></small>
+            <span id="connected-user" class="connected-user" hidden></span>
+            <button id="change-user" class="change-user" type="button" hidden>Change</button>
+          </div>
+        </header>
+
+        <section id="empty-state" class="hero">
+          <div class="hero-orb orb-one"></div><div class="hero-orb orb-two"></div>
+          <p class="eyebrow">READY WHEN YOU ARE</p>
+          <h3>What can I help you find?</h3>
+          <p class="hero-copy">The assistant combines the current conversation with enterprise knowledge and relevant saved context.</p>
+          <div class="suggestions">
+            <button data-query="What is my laptop model?">Find my laptop model <span>→</span></button>
+            <button data-query="What is my leave balance?">Check my leave balance <span>→</span></button>
+            <button data-query="What is the company travel policy?">Ask about policy <span>→</span></button>
+          </div>
+        </section>
+
+        <section id="chat" class="chat" aria-live="polite"></section>
+        <form id="query-form" class="composer">
+          <input id="query" aria-label="Ask the enterprise assistant" placeholder="Connect an employee ID to begin" autocomplete="off" disabled>
+          <button id="send" type="submit" disabled><span>Send</span><b>↗</b></button>
+        </form>
+        <p id="form-error" class="form-error" role="alert"></p>
+      </section>
+    </main>
+    <script src="/dashboard/static/app.js?v=agent-id-v1"></script>
+  </body>
+</html>

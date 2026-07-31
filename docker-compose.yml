@@ -1,0 +1,93 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    command: sh -c "python -m app.bootstrap && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      REDIS_URL: redis://redis:6379/0
+      PROCESS_ROLE: api
+    volumes:
+      - ./data/knowledge_base.xlsx:/app/data/knowledge_base.xlsx:ro
+      - ./logs:/app/logs
+    depends_on:
+      neo4j: { condition: service_healthy }
+      chromadb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build: .
+    env_file: .env
+    command: python -m app.worker
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      REDIS_URL: redis://redis:6379/0
+      PROCESS_ROLE: worker
+    volumes:
+      - ./data/knowledge_base.xlsx:/app/data/knowledge_base.xlsx:ro
+      - ./logs:/app/logs
+    depends_on:
+      neo4j: { condition: service_healthy }
+      chromadb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - context_layer_neo4j_data:/data
+    healthcheck:
+      # The API performs the authenticated Neo4j readiness query. This probe
+      # only waits for Bolt to accept TCP connections.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/7687'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - chroma_data:/data
+    healthcheck:
+      # The official Chroma image does not include Python, curl, or wget.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - context_layer_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  context_layer_neo4j_data:
+  chroma_data:
+  context_layer_redis_data:

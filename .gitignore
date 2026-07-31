@@ -1,0 +1,36 @@
+# Python environments and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local configuration and demo data
+.env
+.env.*
+!.env.example
+data/*.xlsx
+
+# Runtime diagnostics and generated calibration reports
+logs/
+*-promotion-comparison-*.jsonl
+*-performance-summary.jsonl
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini
