@@ -20,7 +20,9 @@ POST /query
 
 `ContextOrchestrator` does not mutate durable state while retrieving context.
 It can return internal `ContextWriteIntent` objects for cache or refresh work.
-It does not enqueue or apply them during the read.
+After assembly, the API atomically queues each distinct intent to Redis Streams;
+the worker dispatches it to the existing writer. Context retrieval itself never
+enqueues or applies the intent.
 
 ## Observation and write path
 
@@ -30,8 +32,8 @@ Ingress -> Observation -> ObservationValidator -> EvidenceStore
         -> Promotion Comparison Capture -> Redis vector-projection job -> ChromaDB
 ```
 
-The worker handles `memory-extraction`, `profile-observation`,
-`enterprise-cache`, and `vector-projection` streams. Redis Streams provide
+The worker handles `memory-extraction`, `context-write-intent`,
+`profile-observation`, `enterprise-cache`, and `vector-projection` streams. Redis Streams provide
 bounded retries, dead-letter streams, and consumer-group recovery.
 
 ## Conversation extraction
@@ -50,7 +52,7 @@ Questions and general knowledge are ignored.
 
 - Extraction uses an LLM and can return no facts or unsupported predicates.
 - The default worker process hosts multiple queue consumers.
-- Write intents are represented by the read path but are not dispatched there.
+- Duplicate deferred intents are coalesced atomically before they enter the worker queue.
 
 ## Related documents
 

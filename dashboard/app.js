@@ -69,7 +69,7 @@ document.querySelectorAll('[data-query]').forEach(button => button.addEventListe
 async function checkHealth() {
   const dot = document.querySelector('#health-dot'); const label = document.querySelector('#health-label'); const list = document.querySelector('#service-list');
   try {
-    const health = await (await fetch('/ready')).json(); const services = ['neo4j', 'chromadb', 'groq', 'redis']; const healthy = health.status === 'healthy';
+    const health = await (await fetch('/ready')).json(); const services = ['neo4j', 'chromadb', 'LLM', 'redis']; const healthy = health.status === 'healthy';
     dot.className = `health-dot ${healthy ? 'ok' : 'bad'}`; label.textContent = healthy ? 'All core services online' : 'Service attention needed';
     list.textContent = services.map(name => `${health[name] ? '●' : '○'} ${name}`).join('  ');
   } catch { dot.className = 'health-dot bad'; label.textContent = 'Context layer unavailable'; list.textContent = 'Start the Docker demo stack to connect.'; }

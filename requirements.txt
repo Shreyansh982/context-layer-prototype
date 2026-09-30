@@ -5,8 +5,9 @@ requests
 neo4j
 chromadb
 
-torch
-sentence-transformers
+# The CPU-only Torch wheel is installed from PyTorch's CPU index in Dockerfile.
+sentence-transformers==5.6.0
+transformers==5.2.0
 
 groq
 google-genai

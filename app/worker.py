@@ -5,7 +5,7 @@ import socket
 import threading
 import time
 
-from app.models import ConversationMessage, Observation
+from app.models import ContextWriteIntent, ConversationMessage, KnowledgeRecord, Observation
 from app.services.extraction import extraction_service
 from app.services.jobs import job_queue
 from app.services.memory import memory_service
@@ -16,6 +16,7 @@ from app.bootstrap import run_migrations
 from app.services.confidence import score
 from app.services.profile import profile_service
 from app.services.enterprise_cache import enterprise_profile_cache_service
+from app.services.knowledge import EnterpriseField
 from app.performance import finish_timing, start_timing, timed
 from app.extraction_trace import activate as activate_trace, emit as trace_emit, stage as trace_stage, warning as trace_warning
 from app.services.predicate_registry import predicate_registry
@@ -173,6 +174,31 @@ def handle_enterprise_cache(payload: dict) -> None:
     enterprise_profile_cache_service.process(payload)
 
 
+def handle_context_write_intent(payload: dict) -> None:
+    """Execute a post-read intent through the existing worker-owned writers."""
+    intent = ContextWriteIntent.model_validate(payload)
+    if intent.kind == "enterprise_cache":
+        records = [KnowledgeRecord.model_validate(record) for record in intent.payload["records"]]
+        fields = [
+            EnterpriseField(**field) if isinstance(field, dict) else field
+            for field in (intent.payload.get("matched_fields") or [])
+        ]
+        enterprise_profile_cache_service.enqueue_records(
+            intent.payload["user_id"], records, fields,
+        )
+        return
+    if intent.kind == "knowledge_memory_refresh":
+        memory = memory_service.get_memory_by_id(intent.payload["memory_id"])
+        if memory is not None:
+            memory_service.refresh_knowledge_memory(
+                memory,
+                intent.payload["content"],
+                intent.payload["knowledge_reference"],
+            )
+        return
+    raise ValueError(f"Unsupported context write intent: {intent.kind}")
+
+
 def enterprise_cache_refresh_loop() -> None:
     while True:
         token = start_timing("worker", "enterprise-cache-refresh")
@@ -221,6 +247,7 @@ def main() -> None:
     threading.Thread(target=job_queue.process_forever, args=("vector-projection", "vector-workers", consumer + "-vector", handle_vector_projection), daemon=True).start()
     threading.Thread(target=job_queue.process_forever, args=("profile-observation", "profile-workers", consumer + "-profile", handle_profile_observation), daemon=True).start()
     threading.Thread(target=job_queue.process_forever, args=("enterprise-cache", "enterprise-cache-workers", consumer + "-enterprise-cache", handle_enterprise_cache), daemon=True).start()
+    threading.Thread(target=job_queue.process_forever, args=("context-write-intent", "context-write-intent-workers", consumer + "-context-write-intent", handle_context_write_intent), daemon=True).start()
     job_queue.process_forever("memory-extraction", "extraction-workers", consumer + "-extract", handle_extraction)
 
 

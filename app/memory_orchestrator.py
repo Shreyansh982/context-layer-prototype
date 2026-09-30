@@ -9,7 +9,7 @@ from app.services.confidence import score
 from app.services.extraction import extraction_service
 from app.services.memory import memory_service
 from app.services.facts import canonical_fact_service, fact_normalizer
-from app.models import ExtractedFact, MemoryScope, Observation
+from app.models import ContextWriteIntent, ExtractedFact, MemoryScope, Observation
 from app.services.jobs import job_queue
 from app.services.profile import profile_service
 from app.config import settings
@@ -127,6 +127,31 @@ class ApplicationOrchestrator:
         return memory_service.get_user_memory(
             user_id, agent_id
         )
+
+    def dispatch_context_write_intents(self, intents: list[ContextWriteIntent]) -> int:
+        """Queue distinct post-read mutations without making retrieval stateful.
+
+        Intent execution belongs to the worker.  This API-side boundary only
+        records durable Redis Stream work; the worker remains responsible for
+        invoking the existing validated/evidenced writers.
+        """
+        dispatched = 0
+        seen: set[str] = set()
+        for intent in intents:
+            key = intent.idempotency_key()
+            if key in seen:
+                continue
+            seen.add(key)
+            message_id = job_queue.enqueue_once(
+                "context-write-intent",
+                intent.model_dump(mode="json"),
+                idempotency_key=f"context-layer:context-write-intent:{key}",
+                ttl_seconds=settings.ENTERPRISE_CACHE_REFRESH_INTERVAL_SECONDS,
+            )
+            if message_id is not None:
+                dispatched += 1
+        logger.info("Deferred context write intents queued: count=%d", dispatched)
+        return dispatched
 
     def _store_immediate_named_fact(self, user_id: str, agent_id: str, role: str, content: str, message) -> None:
         """Persist explicit self-identification without waiting for buffer eviction."""

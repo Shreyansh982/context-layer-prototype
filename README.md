@@ -9,6 +9,24 @@ actions on a user's behalf. External agents and applications call it to obtain
 bounded, attributable context and to persist conversation-derived knowledge.
 The repository includes a small example integration in `agent/`.
 
+## Project snapshot
+
+This is a static code and configuration snapshot, not a report of runtime
+performance, capacity, latency, or accuracy.
+
+| Area | Current code-derived value | Source |
+|---|---|---|
+| Compose topology | 5 services: API, worker, Neo4j, ChromaDB, and Redis (2 application components and 3 backing services) | `docker-compose.yml` |
+| Test modules | 33 files matching `tests/test_*.py` | `tests/` |
+| Request admission | 8 concurrent requests; 2-second queue timeout | `app/config.py`, `app/observability.py` |
+| Input limits | 8,000 query characters; 24,000 prompt characters | `app/config.py`, `app/llm.py` |
+| Context and retrieval | 8-message active conversation buffer; `TOP_K=10` | `app/config.py`, `app/services/conversation.py`, `app/context_orchestrator.py` |
+| Shadow promotion policy | 3 observations; 3 distinct sessions; score threshold 0.70; 90-day recency window | `app/services/promotion_policy.py`, `app/config.py` |
+| Evidence retention | 97 days | `app/config.py`, `app/services/evidence.py` |
+| Profile signals | 90-day signal window plus 7-day retention buffer (97-day Redis TTL) | `app/config.py`, `app/services/profile.py` |
+| Local diagnostics | Up to 2,000 in-process samples; 300-second summary interval; 14-day report retention | `app/config.py`, `app/performance.py` |
+| Load-probe input | Default concurrency 40; this is a probe setting, not a capacity claim | `scripts/load_test.py` |
+
 ## Key features
 
 - **Observation-based pipeline** - every memory-producing ingress creates an

@@ -96,6 +96,10 @@ def query(request: QueryRequest, principal: Principal = Depends(get_principal)):
             user_id=user_id, agent_id=request.agent_id, query=request.query,
             routes=routes, decision=decision,
         )
+    # Context assembly only describes mutations.  Queue them after the read
+    # completes so retrieval remains pure and workers retain write ownership.
+    with timed("context.write_intent_dispatch"):
+        application_orchestrator.dispatch_context_write_intents(context.write_intents)
     with timed("prompt.construction"):
         prompt = prompt_builder.build(query=request.query, context=context)
     with timed("llm.answer"):

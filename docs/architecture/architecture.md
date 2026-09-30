@@ -30,7 +30,7 @@ Client / external agent
 | Neo4j | Durable users, sessions, messages, canonical facts, fact observations, profiles, and legacy memories. |
 | ChromaDB | Recoverable semantic projection for facts and legacy memories. |
 | Excel | Authoritative demo enterprise source for authorized employee fields. |
-| Worker | Extraction, profile handling, enterprise-cache jobs, vector projection, and optional enterprise sync. |
+| Worker | Extraction, deferred context-write intents, profile handling, enterprise-cache jobs, vector projection, and optional enterprise sync. |
 
 Gemini is the configurable primary answer provider. Groq is the automatic
 answer fallback and is used by the current extraction service.
@@ -38,7 +38,7 @@ answer fallback and is used by the current extraction service.
 ## Important implementation decisions
 
 - Neo4j is the durable system of record; ChromaDB can be rebuilt from graph records.
-- Read-only context assembly returns internal cache/refresh intents rather than executing them.
+- Read-only context assembly returns internal cache/refresh intents rather than executing them. The API queues distinct intents only after assembly; worker handlers invoke the existing writers.
 - `ENABLE_ENTERPRISE_SYNC=false` is the development default; direct Excel lookup remains available.
 - User-facing identity comes from the authenticated principal and must match request `user_id`.
 - The current demo stack contains no SQLite component.

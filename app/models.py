@@ -8,6 +8,8 @@ will exchange these objects.
 
 from datetime import datetime
 from enum import Enum
+import hashlib
+import json
 from typing import Any, Mapping
 from uuid import uuid4
 
@@ -146,6 +148,21 @@ class ContextWriteIntent(BaseModel):
 
     kind: str
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    def idempotency_key(self) -> str:
+        """Return the stable queue identity for this deferred operation.
+
+        Context assembly can discover the same work repeatedly.  The key is
+        derived only from the immutable intent contract so dispatchers can
+        coalesce that work without making the read path stateful.
+        """
+        encoded = json.dumps(
+            self.model_dump(mode="json"),
+            default=str,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 # EXTRACTION
 

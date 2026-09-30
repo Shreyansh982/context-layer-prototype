@@ -29,6 +29,46 @@ class RedisJobQueue:
         with timed("redis.job_enqueue"):
             return retry_external("Redis job queue", lambda: self.client.xadd(stream, fields))
 
+    _enqueue_once_script = """
+    if redis.call('SET', KEYS[1], '1', 'NX', 'EX', ARGV[1]) then
+      return redis.call('XADD', KEYS[2], '*', 'payload', ARGV[2], 'attempt', ARGV[3])
+    end
+    return ''
+    """
+
+    def enqueue_once(
+        self,
+        stream: str,
+        payload: dict,
+        *,
+        idempotency_key: str,
+        ttl_seconds: int,
+        attempt: int = 0,
+    ) -> str | None:
+        """Atomically enqueue a logical operation once during its TTL window.
+
+        The Redis script claims the idempotency key and appends to the Stream
+        together, so repeated API reads cannot reserve work without queuing it
+        or produce duplicate deferred jobs.
+        """
+        payload = dict(payload)
+        payload.setdefault("origin_request_id", current_operation_id())
+        encoded = json.dumps(payload, default=str)
+        with timed("redis.job_enqueue_once"):
+            result = retry_external(
+                "Redis job queue",
+                lambda: self.client.eval(
+                    self._enqueue_once_script,
+                    2,
+                    idempotency_key,
+                    stream,
+                    max(1, int(ttl_seconds)),
+                    encoded,
+                    str(attempt),
+                ),
+            )
+        return str(result) if result else None
+
     def _ensure_group(self, stream: str, group: str) -> None:
         try:
             self.client.xgroup_create(stream, group, id="0", mkstream=True)
