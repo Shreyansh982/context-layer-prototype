@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GROQ_API_KEY: str
     GEMINI_MODEL: str = "gemini-3.6-flash"
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     # Neo4j
     NEO4J_URI: str

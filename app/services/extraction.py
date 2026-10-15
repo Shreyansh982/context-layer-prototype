@@ -126,7 +126,7 @@ Conversation
 
         with timed("llm.extraction"):
             response = self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=settings.GROQ_MODEL,
                 temperature=0,
                 response_format={"type": "json_object"},
                 messages=[
